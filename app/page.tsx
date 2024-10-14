@@ -1,6 +1,11 @@
+"use client"
+// app/page.tsx
+import Notepad from './components/Notepad';
 
-export default function Home() {
+export default function Page() {
   return (
-    <div className="text-4xl">Hello world</div>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <Notepad />
+    </div>
   );
 }
