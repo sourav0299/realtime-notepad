@@ -16,7 +16,6 @@ const Notepad = () => {
 
   useEffect(() => {
     const fetchContent = async () => {
-      console.log('Fetching content...');
       const { data, error } = await supabase
         .from("notepad")
         .select("content")
@@ -39,11 +38,9 @@ const Notepad = () => {
             setContent("");
           }
         } else {
-          console.error("Error fetching content:", error);
           setError(`Failed to load content: ${error.message}`);
         }
       } else if (data) {
-        console.log('Content fetched successfully:', data);
         setContent(data.content || "");
       }
     };
@@ -81,12 +78,10 @@ const Notepad = () => {
         .select();
 
       if (error) {
-        console.error("Error updating content:", error.message);
         setError("Failed to save changes. Please try again.");
         toast.error("Failed to save changes");
       } else {
-        console.log("Content saved successfully:", data);
-        toast.success("Changes saved successfully");
+          
       }
       setIsSaving(false);
     }, 1000),
@@ -100,7 +95,8 @@ const Notepad = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl">
+      <div className="container mx-auto p-4 max-w-3xl">
+        <Toaster />
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Real-Time Notepad</h1>
       <div className="relative bg-white shadow-md rounded-lg overflow-hidden">
         <textarea
