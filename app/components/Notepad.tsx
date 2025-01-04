@@ -84,7 +84,7 @@ const Notepad = () => {
           
       }
       setIsSaving(false);
-    }, 1000),
+    }, 3000),
     []
   );
 
