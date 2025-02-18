@@ -6,12 +6,16 @@ import toast, { Toaster } from "react-hot-toast";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
+interface NotepadPorps {
+  notepadId: string;
+}
+
 interface NotepadRow {
   id: number;
   content: string;
 }
 
-const Notepad = () => {
+const Notepad : React.FC<NotepadPorps> = ({notepadId}) => {
   const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +84,7 @@ const Notepad = () => {
       const { data, error } = await supabase
         .from("notepad")
         .select("content")
-        .eq("id", 1)
+        .eq("id", notepadId)
         .single();
 
       if (error) {
@@ -88,7 +92,7 @@ const Notepad = () => {
           console.log("No data found, creating initial row");
           const { data: insertData, error: insertError } = await supabase
             .from("notepad")
-            .insert({ id: 1, content: "" })
+            .insert({ id: notepadId, content: "" })
             .select();
           
           if (insertError) {
@@ -107,13 +111,13 @@ const Notepad = () => {
     };
 
     fetchContent();
-  }, []);
+  }, [notepadId]);
 
   useEffect(() => {
-    const channel: RealtimeChannel = supabase.channel('notepad_changes')
+    const channel: RealtimeChannel = supabase.channel(`notepad_${notepadId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'notepad' },
+        { event: 'UPDATE', schema: 'public', table: 'notepad', filter: `id=eq.${notepadId}` },
         (payload) => {
           console.log("Received real-time update:", payload);
           const newContent = (payload.new as NotepadRow).content;
@@ -125,18 +129,17 @@ const Notepad = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [notepadId]);
 
   const saveContent = useCallback(
     debounce(async (newContent: string) => {
       setIsSaving(true);
       setError(null);
       console.log("Saving content:", newContent);
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("notepad")
         .update({ content: newContent })
-        .eq("id", 1)
-        .select();
+        .eq("id", notepadId);
 
       if (error) {
         setError("Failed to save changes. Please try again.");
@@ -146,7 +149,7 @@ const Notepad = () => {
       }
       setIsSaving(false);
     }, 3000),
-    []
+    [notepadId]
   );
 
   const handleChange = (newContent: string) => {
