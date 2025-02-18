@@ -79,57 +79,72 @@ const Notepad : React.FC<NotepadPorps> = ({notepadId}) => {
     )
     .join('\n');
 
-  useEffect(() => {
-    const fetchContent = async () => {
-      const { data, error } = await supabase
-        .from("notepad")
-        .select("content")
-        .eq("id", notepadId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.log("No data found, creating initial row");
-          const { data: insertData, error: insertError } = await supabase
-            .from("notepad")
-            .insert({ id: notepadId, content: "" })
-            .select();
-          
-          if (insertError) {
-            console.error("Error creating initial row:", insertError);
-            setError(`Failed to initialize notepad: ${insertError.message}`);
-          } else if (insertData) {
-            console.log("Initial row created successfully:", insertData);
-            setContent("");
+    useEffect(() => {
+      let channel: RealtimeChannel;
+  
+      const setupRealtime = async () => {
+        // First fetch the initial content
+        const { data, error } = await supabase
+          .from("notepad")
+          .select("content")
+          .eq("id", notepadId)
+          .single();
+  
+        if (error) {
+          if (error.code === 'PGRST116') {
+            // Create new notepad if it doesn't exist
+            const { data: insertData, error: insertError } = await supabase
+              .from("notepad")
+              .insert({ id: notepadId, content: "" })
+              .select();
+            
+            if (insertError) {
+              console.error("Error creating initial row:", insertError);
+              setError(`Failed to initialize notepad: ${insertError.message}`);
+            } else if (insertData) {
+              console.log("Initial row created successfully:", insertData);
+              setContent("");
+            }
+          } else {
+            setError(`Failed to load content: ${error.message}`);
           }
-        } else {
-          setError(`Failed to load content: ${error.message}`);
+        } else if (data) {
+          setContent(data.content || "");
         }
-      } else if (data) {
-        setContent(data.content || "");
-      }
-    };
-
-    fetchContent();
-  }, [notepadId]);
-
-  useEffect(() => {
-    const channel: RealtimeChannel = supabase.channel(`notepad_${notepadId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'notepad', filter: `id=eq.${notepadId}` },
-        (payload) => {
-          console.log("Received real-time update:", payload);
-          const newContent = (payload.new as NotepadRow).content;
-          setContent(newContent);
+  
+        // Then set up realtime subscription
+        channel = supabase.channel(`notepad_${notepadId}`)
+          .on(
+            'postgres_changes',
+            { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'notepad', 
+              filter: `id=eq.${notepadId}` 
+            },
+            (payload) => {
+              console.log("Received real-time update:", payload);
+              const newContent = (payload.new as NotepadRow).content;
+              // Only update if content is different to avoid loops
+              if (newContent !== content) {
+                setContent(newContent || "");
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log("Subscription status:", status);
+          });
+      };
+  
+      setupRealtime();
+  
+      return () => {
+        if (channel) {
+          console.log("Cleaning up channel subscription");
+          supabase.removeChannel(channel);
         }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [notepadId]);
+      };
+    }, [notepadId, content]);
 
   const saveContent = useCallback(
     debounce(async (newContent: string) => {
@@ -145,7 +160,7 @@ const Notepad : React.FC<NotepadPorps> = ({notepadId}) => {
         setError("Failed to save changes. Please try again.");
         toast.error("Failed to save changes");
       } else {
-          
+          console.log("Content saved successfully")
       }
       setIsSaving(false);
     }, 3000),
