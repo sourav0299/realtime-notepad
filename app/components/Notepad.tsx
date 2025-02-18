@@ -11,7 +11,7 @@ interface NotepadPorps {
 }
 
 interface NotepadRow {
-  id: number;
+  id: string;
   content: string;
 }
 
