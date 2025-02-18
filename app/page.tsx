@@ -54,14 +54,29 @@ export default function Page() {
   };
 
   const deleteNotepad = async (id: string) => {
-    const { error } = await supabase
-      .from('notepad')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      console.error('Error deleting notepad:', error);
-    } else {
-      setNotepads(prevNotepads => prevNotepads.filter(notepad => notepad.id !== id));
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('notepad')
+        .delete()
+        .eq('id', id);
+  
+      if (error) {
+        console.error('Error deleting notepad:', error);
+        toast.error('Failed to delete notepad');
+      } else {
+        // Update local state
+        setNotepads(prevNotepads => prevNotepads.filter(notepad => notepad.id !== id));
+        toast.success('Notepad deleted successfully');
+        
+        // Refresh the list to ensure sync with server
+        await fetchNotepads();
+      }
+    } catch (err) {
+      console.error('Error in deleteNotepad:', err);
+      toast.error('Something went wrong while deleting');
+    } finally {
+      setLoading(false);
     }
   };
 
