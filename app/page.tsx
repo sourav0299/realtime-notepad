@@ -18,7 +18,7 @@ export default function Page() {
   const [randomId, setRandomId] = useState(generateRandomString());
   const [notepads, setNotepads] = useState<NotepadRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const createNewNotepad = () => {
     router.push(`/notepad/${randomId}`);
@@ -28,11 +28,13 @@ export default function Page() {
     const url = `https://notepad0299.vercel.app/notepad/${randomId}`;
     navigator.clipboard.writeText(url)
       .then(() => {
-        setCopied(true)
+        setCopied(true);
+        toast.success('URL copied to clipboard!');
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
-        setCopied(false)
+        setCopied(false);
+        toast.error('Failed to copy URL');
       });
   };
 
@@ -85,45 +87,73 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <GitHubButton repoUrl="https://github.com/sourav0299/realtime-notepad" />
-      <h1 className="text-4xl font-bold py-10">Real-Time Notepad</h1>
-      <div className="flex w-full max-w-sm items-center space-x-2">
-        <Input
-          type="text"
-          value={`https://notepad0299.vercel.app/notepad/${randomId}`}
-          onChange={handleInputChange}
-          placeholder="Enter notepad ID"
-          className='bg-white'
-        />
-        <Button onClick={copySlug}>
-          {copied ? "Copied!" : "Copy"}
-        </Button>
-        <Button onClick={createNewNotepad}>
-          Go
-        </Button>
-      </div>
-      <div className="mt-10 w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-4">All Notepads</h2>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <ul className="space-y-4">
-            {notepads.map(notepad => (
-              <li key={notepad.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
-                <span>{notepad.id}</span>
-                <div className="space-x-2">
-                  <Button variant="link" onClick={() => router.push(`/notepad/${notepad.id}`)}>
-                    Visit
-                  </Button>
-                  <Button variant="destructive" onClick={() => deleteNotepad(notepad.id)}>
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-4xl">
+        <div className="flex justify-end w-full mb-4">
+          <GitHubButton repoUrl="https://github.com/sourav0299/realtime-notepad" />
+        </div>
+        
+        <h1 className="text-3xl sm:text-4xl font-bold py-6 sm:py-8 text-center">
+          Real-Time Notepad
+        </h1>
+
+        <div className="flex flex-col sm:flex-row w-full gap-2 sm:gap-4 mb-8">
+          <Input
+            type="text"
+            value={`https://notepad0299.vercel.app/notepad/${randomId}`}
+            onChange={handleInputChange}
+            placeholder="Enter notepad ID"
+            className="bg-white flex-grow"
+          />
+          <div className="flex gap-2 sm:gap-4">
+            <Button 
+              onClick={copySlug}
+              className="flex-1 sm:flex-none"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+            <Button 
+              onClick={createNewNotepad}
+              className="flex-1 sm:flex-none"
+            >
+              Go
+            </Button>
+          </div>
+        </div>
+
+        <div className="w-full">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4">All Notepads</h2>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <ul className="space-y-3">
+              {notepads.map(notepad => (
+                <li 
+                  key={notepad.id} 
+                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-white rounded-lg shadow gap-3"
+                >
+                  <span className="text-sm sm:text-base break-all">{notepad.id}</span>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button 
+                      variant="link" 
+                      onClick={() => router.push(`/notepad/${notepad.id}`)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Visit
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => deleteNotepad(notepad.id)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
