@@ -3,8 +3,10 @@ import { supabase } from "../../supabaseClient";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import debounce from "lodash/debounce";
 import toast, { Toaster } from "react-hot-toast";
-import ReactQuill from "react-quill";
+import dynamic from "next/dynamic";
 import "react-quill/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 interface NotepadPorps {
   notepadId: string;
@@ -83,6 +85,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
 
   useEffect(() => {
     const fetchContent = async () => {
+      console.log('Fetching content...');
       const { data, error } = await supabase
         .from("notepad")
         .select("content")
@@ -91,6 +94,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
 
       if (error) {
         if (error.code === 'PGRST116') {
+          console.log("No data found, creating initial row");
           const { data: insertData, error: insertError } = await supabase
             .from("notepad")
             .insert({ id: notepadId, content: "" })
@@ -105,9 +109,11 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
             setContent("");
           }
         } else {
+          console.error("Error fetching content:", error);
           setError(`Failed to load content: ${error.message}`);
         }
       } else if (data) {
+        console.log('Content fetched successfully:', data);
         lastSavedContent.current = data.content || "";
         setContent(data.content || "");
       }
@@ -134,7 +140,6 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
           (payload) => {
             console.log("Received real-time update:", payload);
             const newContent = (payload.new as NotepadRow).content;
-            // Only update if content is different from what we last saved
             if (newContent !== lastSavedContent.current) {
               lastSavedContent.current = newContent || "";
               setContent(newContent || "");
@@ -156,12 +161,11 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
 
   const saveContent = useCallback(
     debounce(async (newContent: string) => {
-      if (!isInitialized) return; // Don't save until initial fetch is complete
+      if (!isInitialized) return;
       
       setIsSaving(true);
       setError(null);
       
-      // Only save if content has changed from last saved version
       if (newContent !== lastSavedContent.current) {
         console.log("Saving content:", newContent);
         const { error } = await supabase
@@ -170,11 +174,11 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
           .eq("id", notepadId);
 
         if (error) {
+          console.error("Error updating content:", error.message);
           setError("Failed to save changes. Please try again.");
           toast.error("Failed to save changes");
         } else {
           lastSavedContent.current = newContent;
-          console.log("Content saved successfully");
         }
       }
       
