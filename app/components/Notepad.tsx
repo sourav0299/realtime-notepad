@@ -19,10 +19,10 @@ const Notepad = () => {
   const modules = {
     toolbar: [
       ['bold', 'italic', 'underline'],
-      [{'size': ['small', false, 'large', 'huge']}],
+      [{'header': [1, 2, 3, 4, 5, 6, false]}],
       ['blockquote', 'code-block'],
       [{ 'list': 'bullet' }],
-      [{ 'background': ['yellow', 'red', 'green'] }],
+      [{ 'background': ['yellow', 'red', 'green', 'white'] }],
     ],
   };
 
@@ -41,6 +41,24 @@ const Notepad = () => {
       minHeight: 'calc(100vh - 250px)',
       fontSize: '16px',
     },
+    '.ql-editor h1': {
+    fontSize: '2em !important',
+  },
+  '.ql-editor h2': {
+    fontSize: '1.5em !important',
+  },
+  '.ql-editor h3': {
+    fontSize: '1.17em !important',
+  },
+  '.ql-editor h4': {
+    fontSize: '1em !important',
+  },
+  '.ql-editor h5': {
+    fontSize: '0.83em !important',
+  },
+  '.ql-editor h6': {
+    fontSize: '0.67em !important',
+  },
     '.ql-snow .ql-picker.ql-background .ql-picker-options': {
       padding: '3px 5px',
     },
