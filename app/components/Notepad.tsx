@@ -31,6 +31,8 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       ['blockquote', 'code-block'],
       [{ 'list': 'bullet' }],
       [{ 'background': ['yellow', 'red', 'green', 'white'] }],
+      [{ 'color': ['yellow', 'red', 'green', 'white'] }],
+      ['link']
     ],
   };
 
@@ -47,7 +49,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     '.ql-editor': {
       padding: '1.5rem !important',
       minHeight: 'calc(100vh - 250px)',
-      fontSize: '16px',
+      fontSize: '2em',
     },
     '.ql-editor h1': {
       fontSize: '2em !important',
@@ -183,7 +185,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       }
       
       setIsSaving(false);
-    }, 1000), // Reduced debounce time for better responsiveness
+    }, 3000), 
     [notepadId, isInitialized]
   );
 
