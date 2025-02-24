@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
+import { ModeToggle } from "./components/ToggleButton"; 
 
 interface NotepadRow {
   id: string;
@@ -89,6 +90,7 @@ export default function Page() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-4xl">
+        <ModeToggle />
         <div className="flex justify-end w-full mb-4">
           <GitHubButton repoUrl="https://github.com/sourav0299/realtime-notepad" />
         </div>
