@@ -1,4 +1,4 @@
-// app/layout.tsx
+import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 
 export default function RootLayout({
@@ -12,9 +12,11 @@ export default function RootLayout({
         <title>Real-Time Notepad</title>
       </head>
       <body>
-        <main className="min-h-screen bg-gray-100 text-gray-800">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <main className="min-h-screen">
           {children}
         </main>
+        </ThemeProvider>
       </body>
     </html>
   );

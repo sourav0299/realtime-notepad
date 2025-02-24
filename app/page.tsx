@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
+import { ModeToggle } from "./components/ToggleButton"; 
 
 interface NotepadRow {
   id: string;
@@ -89,6 +90,7 @@ export default function Page() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-4xl">
+        <ModeToggle />
         <div className="flex justify-end w-full mb-4">
           <GitHubButton repoUrl="https://github.com/sourav0299/realtime-notepad" />
         </div>
@@ -103,18 +105,18 @@ export default function Page() {
             value={`https://notepad0299.vercel.app/notepad/${randomId}`}
             onChange={handleInputChange}
             placeholder="Enter notepad ID"
-            className="bg-white flex-grow"
+            className="bg-white dark:bg-black flex-grow"
           />
           <div className="flex gap-2 sm:gap-4">
             <Button 
               onClick={copySlug}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none dark:bg-black dark:text-white dark:border" 
             >
               {copied ? "Copied!" : "Copy"}
             </Button>
             <Button 
               onClick={createNewNotepad}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none dark:bg-black dark:text-white dark:border"
             >
               Go
             </Button>
@@ -130,7 +132,7 @@ export default function Page() {
               {notepads.map(notepad => (
                 <li 
                   key={notepad.id} 
-                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-white rounded-lg shadow gap-3"
+                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-white dark:bg-black rounded-lg shadow gap-3"
                 >
                   <span className="text-sm sm:text-base break-all">{notepad.id}</span>
                   <div className="flex gap-2 w-full sm:w-auto">
