@@ -7,7 +7,7 @@ export default function NotepadPage() {
   const notepadId = params.id as string;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center justify-center h-screen">
       <Notepad notepadId={notepadId} />
     </div>
   );

@@ -52,6 +52,9 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       minHeight: 'calc(100vh - 250px)',
       fontSize: '2em',
       color: theme === 'dark' ? 'white !important' : 'black !important',
+      '@media(max-width: 768px)': {
+        paddingBottom: '8rem !important'
+      },
     },
     '.ql-editor *': {
       color: 'inherit !important',
@@ -69,10 +72,25 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   };
 
   const styleString = Object.entries(quillStyles)
-    .map(([selector, rules]) => 
-      `${selector} { ${typeof rules === 'string' ? rules : Object.entries(rules).map(([k, v]) => `${k}: ${v}`).join('; ')} }`
-    )
-    .join('\n');
+  .map(([selector, rules]) => {
+    if (typeof rules === 'string') {
+      return `${selector} { ${rules} }`;
+    }
+    
+    const mediaQueries: string[] = [];
+    const normalRules: string[] = [];
+    
+    Object.entries(rules).forEach(([key, value]) => {
+      if (key.startsWith('@media')) {
+        mediaQueries.push(`${key} { ${selector} { ${value} } }`);
+      } else {
+        normalRules.push(`${key}: ${value}`);
+      }
+    });
+    
+    return `${selector} { ${normalRules.join('; ')} } ${mediaQueries.join(' ')}`;
+  })
+  .join('\n');
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -184,11 +202,11 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-[1440px]">
+    <div className="container px-3 max-w-[1440px]">
       <style>{styleString}</style>
       <Toaster />
-      <div className="flex items-center justify-between">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
+      <div className="flex items-center justify-between px-3">
+      <h1 className="text-lg md:text-xl lg:text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
         <ModeToggle />
       </div>
       <div className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white">
