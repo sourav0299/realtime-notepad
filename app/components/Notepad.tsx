@@ -5,6 +5,8 @@ import debounce from "lodash/debounce";
 import toast, { Toaster } from "react-hot-toast";
 import dynamic from "next/dynamic";
 import "react-quill/dist/quill.snow.css";
+import { useTheme } from "next-themes";
+import { ModeToggle } from "../components/ToggleButton";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -18,6 +20,7 @@ interface NotepadRow {
 }
 
 const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
+  const { theme } = useTheme();
   const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +33,6 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       [{'header': [1, 2, 3, 4, 5, 6, false]}],
       ['blockquote', 'code-block'],
       [{ 'list': 'bullet' }],
-      [{ 'background': ['yellow', 'red', 'green', 'white'] }],
-      [{ 'color': ['yellow', 'red', 'green', 'white'] }],
       ['link']
     ],
   };
@@ -42,40 +43,28 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     },
     '.ql-toolbar': {
       border: 'none !important',
-      borderBottom: '1px solid #edf2f7 !important',
+      borderBottom: '1px solid var(--border) !important',
       padding: '8px 12px',
-      background: '#f8fafc',
+      background: 'var(--background)',
     },
     '.ql-editor': {
       padding: '1.5rem !important',
       minHeight: 'calc(100vh - 250px)',
       fontSize: '2em',
+      color: theme === 'dark' ? 'white !important' : 'black !important',
     },
-    '.ql-editor h1': {
-      fontSize: '2em !important',
+    '.ql-editor *': {
+      color: 'inherit !important',
     },
-    '.ql-editor h2': {
-      fontSize: '1.5em !important',
+    '.ql-editor h1, .ql-editor h2, .ql-editor h3, .ql-editor h4, .ql-editor h5, .ql-editor h6, .ql-editor p, .ql-editor span': {
+      color: 'inherit !important',
     },
-    '.ql-editor h3': {
-      fontSize: '1.17em !important',
+    '.dark .ql-editor': {
+      background: 'var(--background)',
+      color: 'white !important',
     },
-    '.ql-editor h4': {
-      fontSize: '1em !important',
-    },
-    '.ql-editor h5': {
-      fontSize: '0.83em !important',
-    },
-    '.ql-editor h6': {
-      fontSize: '0.67em !important',
-    },
-    '.ql-snow .ql-picker.ql-background .ql-picker-options': {
-      padding: '3px 5px',
-    },
-    '.ql-snow .ql-picker.ql-background .ql-picker-item': {
-      width: '100%',
-      height: '25px',
-      margin: '2px 0',
+    '.dark .ql-editor *': {
+      color: 'inherit !important',
     },
   };
 
@@ -198,11 +187,14 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     <div className="container mx-auto p-4 max-w-[1440px]">
       <style>{styleString}</style>
       <Toaster />
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Real-Time Notepad</h1>
-      <div className="relative bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
+        <ModeToggle />
+      </div>
+      <div className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white">
         <ReactQuill
           theme="snow"
-          className="w-full max-w-[1440px] h-[calc(100vh-200px)] p-6 text-lg text-gray-700 focus:outline-none resize-none"
+          className="w-full max-w-[1440px] h-[calc(100vh-200px)] p-6 text-lg text-gray-800 dark:text-white dark:border focus:outline-none resize-none"
           value={content}
           modules={modules}
           onChange={handleChange}
