@@ -16,16 +16,24 @@ interface NotepadRow {
 
 export default function Page() {
   const router = useRouter();
-  const [randomId, setRandomId] = useState(generateRandomString());
+  const [randomId, setRandomId] = useState('');
   const [notepads, setNotepads] = useState<NotepadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const createNewNotepad = () => {
+    if (!randomId.trim()) {
+      toast.error('Please enter a notepad name');
+      return;
+    }
     router.push(`/notepad/${randomId}`);
   };
 
   const copySlug = () => {
+    if (!randomId.trim()) {
+      toast.error('Please enter a notepad name');
+      return;
+    }
     const url = `https://notepad0299.vercel.app/notepad/${randomId}`;
     navigator.clipboard.writeText(url)
       .then(() => {
@@ -102,7 +110,7 @@ export default function Page() {
         <div className="flex flex-col sm:flex-row w-full gap-2 sm:gap-4 mb-8">
           <Input
             type="text"
-            value={`https://notepad0299.vercel.app/notepad/${randomId}`}
+            value={randomId}
             onChange={handleInputChange}
             placeholder="Enter notepad ID"
             className="bg-white dark:bg-black flex-grow"
