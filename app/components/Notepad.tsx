@@ -49,16 +49,17 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     '.ql-editor': {
       padding: '1.5rem !important',
       minHeight: 'calc(100vh - 250px)',
-      fontSize: '2em',
+      fontSize: '2em !important',
       color: theme === 'dark' ? 'white !important' : 'black !important',
       '@media(max-width: 768px)': {
-        paddingBottom: '8rem !important'
+        paddingBottom: '8rem !important',
+        fontSize: '1.5em !important',
       },
     },
     '.ql-editor *': {
       color: 'inherit !important',
     },
-    '.ql-editor h1, .ql-editor h2, .ql-editor h3, .ql-editor h4, .ql-editor h5, .ql-editor h6, .ql-editor p, .ql-editor span': {
+    '.ql-editor p, .ql-editor span': {
       color: 'inherit !important',
     },
     '.dark .ql-editor': {
