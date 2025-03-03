@@ -75,13 +75,10 @@ export default function Page() {
         console.error("Error deleting notepad:", error);
         toast.error("Failed to delete notepad");
       } else {
-        // Update local state
         setNotepads((prevNotepads) =>
           prevNotepads.filter((notepad) => notepad.id !== id)
         );
         toast.success("Notepad deleted successfully");
-
-        // Refresh the list to ensure sync with server
         await fetchNotepads();
       }
     } catch (err) {
@@ -132,45 +129,7 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="w-full">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4">All Notepads</h2>
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <ul className="space-y-3">
-              {notepads.map((notepad) => (
-                <li
-                  key={notepad.id}
-                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-white dark:bg-black rounded-lg shadow gap-3"
-                >
-                  <span className="text-sm sm:text-base break-all">
-                    {notepad.id}
-                  </span>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="link"
-                      onClick={() => router.push(`/notepad/${notepad.id}`)}
-                      className="flex-1 sm:flex-none"
-                    >
-                      Visit
-                    </Button>
-                    <AlertDialogDemo
-                      onConfirm={() => deleteNotepad(notepad.id)}
-                      trigger={
-                        <Button
-                          variant="destructive"
-                          className="flex-1 sm:flex-none"
-                        >
-                          Delete
-                        </Button>
-                      }
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        
       </div>
     </div>
   );
