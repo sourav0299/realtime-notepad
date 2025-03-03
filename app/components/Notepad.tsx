@@ -30,7 +30,6 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   const modules = {
     toolbar: [
       ['bold', 'italic', 'underline'],
-      [{'header': [1, 2, 3, 4, 5, 6, false]}],
       ['blockquote', 'code-block'],
       [{ 'list': 'bullet' }],
       ['link']
