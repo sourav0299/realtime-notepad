@@ -110,6 +110,7 @@ export default function Page() {
             type="text"
             value={randomId}
             onChange={handleInputChange}
+            onKeyDown={(e) => e.key === "Enter" && createNewNotepad()}
             placeholder="Enter notepad ID"
             className="bg-white dark:bg-black flex-grow"
           />
