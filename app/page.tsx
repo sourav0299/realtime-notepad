@@ -51,7 +51,7 @@ export default function Page() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRandomId(e.target.value);
+    setRandomId(e.target.value.toLowerCase());
   };
 
   const fetchNotepads = async () => {
