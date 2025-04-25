@@ -4,12 +4,18 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 import debounce from "lodash/debounce";
 import toast, { Toaster } from "react-hot-toast";
 import dynamic from "next/dynamic";
-import "react-quill/dist/quill.snow.css";
 import { useTheme } from "next-themes";
 import { ModeToggle } from "../components/ToggleButton";
 import { Button } from "@/components/ui/button";
+import { v4 as uuidv4 } from 'uuid';
+import 'react-quill/dist/quill.snow.css';
+import Cursor from "./Cursor";
+import ReactQuillLib from 'react-quill';
 
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => <div>Loading editor...</div>
+}) as typeof ReactQuillLib;
 
 interface NotepadPorps {
   notepadId: string;
@@ -20,6 +26,14 @@ interface NotepadRow {
   content: string;
 }
 
+interface CursorPosition {
+  userId: string;
+  x: number;
+  y: number;
+  username: string;
+  color: string;
+}
+
 const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   const { theme } = useTheme();
   const [content, setContent] = useState("");
@@ -27,75 +41,101 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const lastSavedContent = useRef(content);
+  const quillRef = useRef<ReactQuillLib>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const userId = useRef(uuidv4());
+  const cursorChannel = useRef<RealtimeChannel | null>(null);
+  const userColor = useRef(`hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`);
+  const userName = useRef(`Anonymous ${Math.floor(Math.random() * 1000)}`);
+  const [cursors, setCursors] = useState<{ [key: string]: CursorPosition }>({});
 
   const modules = {
     toolbar: [
       ['bold', 'italic', 'underline', 'strike'],
-      ['blockquote', 'code-block'],
+      ['blockquote'],
       [{ 'list': 'bullet' }],
       ['link']
-    ],
+    ]
   };
 
-  const quillStyles = {
-    '.ql-container': {
-      border: 'none !important',
-    },
-    '.ql-toolbar': {
-      border: 'none !important',
-      borderBottom: '1px solid var(--border) !important',
-      padding: '8px 12px',
-      background: 'var(--background)',
-    },
-    '.ql-editor': {
-      padding: '1.5rem !important',
-      minHeight: 'calc(100vh - 250px)',
-      fontSize: '2em !important',
-      color: theme === 'dark' ? 'white !important' : 'black !important',
-      '@media(max-width: 768px)': {
-        paddingBottom: '8rem !important',
-        fontSize: '1.5em !important',
-      },
-    },
-    '.ql-editor *': {
-      color: 'inherit !important',
-    },
-    '.ql-editor p, .ql-editor span': {
-      color: 'inherit !important',
-    },
-    '.dark .ql-editor': {
-      background: 'var(--background)',
-      color: 'white !important',
-    },
-    '.dark .ql-editor *': {
-      color: 'inherit !important',
-    },
-  };
+  // Initialize cursor handling
+  useEffect(() => {
+    if (!editorRef.current) return;
 
-  const styleString = Object.entries(quillStyles)
-  .map(([selector, rules]) => {
-    if (typeof rules === 'string') {
-      return `${selector} { ${rules} }`;
-    }
-    
-    const mediaQueries: string[] = [];
-    const normalRules: string[] = [];
-    
-    Object.entries(rules).forEach(([key, value]) => {
-      if (key.startsWith('@media')) {
-        mediaQueries.push(`${key} { ${selector} { ${value} } }`);
-      } else {
-        normalRules.push(`${key}: ${value}`);
+    const updateCursorPosition = (e: MouseEvent) => {
+      if (!cursorChannel.current || !editorRef.current) return;
+
+      const rect = editorRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      cursorChannel.current.send({
+        type: 'broadcast',
+        event: 'cursor_move',
+        payload: {
+          userId: userId.current,
+          x,
+          y,
+          username: userName.current,
+          color: userColor.current
+        }
+      });
+    };
+
+    const debouncedUpdateCursor = debounce(updateCursorPosition, 16); // ~60fps
+
+    // Set up cursor channel
+    cursorChannel.current = supabase.channel(`cursors_${notepadId}`)
+      .on('broadcast', { event: 'cursor_move' }, ({ payload }) => {
+        if (payload.userId !== userId.current) {
+          setCursors(prev => ({
+            ...prev,
+            [payload.userId]: payload
+          }));
+        }
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = cursorChannel.current?.presenceState() || {};
+        console.log('Presence state:', state);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('Join:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('Leave:', key, leftPresences);
+        // Remove cursor when user leaves
+        setCursors(prev => {
+          const newCursors = { ...prev };
+          leftPresences.forEach((presence: any) => {
+            delete newCursors[presence.userId];
+          });
+          return newCursors;
+        });
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await cursorChannel.current?.track({
+            userId: userId.current,
+            username: userName.current
+          });
+        }
+      });
+
+    // Add mouse move listener
+    editorRef.current.addEventListener('mousemove', debouncedUpdateCursor);
+
+    // Cleanup
+    return () => {
+      editorRef.current?.removeEventListener('mousemove', debouncedUpdateCursor);
+      if (cursorChannel.current) {
+        supabase.removeChannel(cursorChannel.current);
       }
-    });
-    
-    return `${selector} { ${normalRules.join('; ')} } ${mediaQueries.join(' ')}`;
-  })
-  .join('\n');
+    };
+  }, [notepadId]);
 
+  // Fetch initial content
   useEffect(() => {
     const fetchContent = async () => {
-      console.log('Fetching content...');
       const { data, error } = await supabase
         .from("notepad")
         .select("content")
@@ -104,71 +144,62 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          console.log("No data found, creating initial row");
           const { data: insertData, error: insertError } = await supabase
             .from("notepad")
             .insert({ id: notepadId, content: "" })
             .select();
           
           if (insertError) {
-            console.error("Error creating initial row:", insertError);
             setError(`Failed to initialize notepad: ${insertError.message}`);
           } else if (insertData) {
-            console.log("Initial row created successfully:", insertData);
             lastSavedContent.current = "";
             setContent("");
           }
         } else {
-          console.error("Error fetching content:", error);
           setError(`Failed to load content: ${error.message}`);
         }
       } else if (data) {
-        console.log('Content fetched successfully:', data);
         lastSavedContent.current = data.content || "";
         setContent(data.content || "");
       }
-
       setIsInitialized(true);
     };
 
     fetchContent();
   }, [notepadId]);
 
+  // Set up real-time content sync
   useEffect(() => {
-    let channel: RealtimeChannel;
+    if (!isInitialized) return;
 
-    if (isInitialized) {
-      channel = supabase.channel(`notepad_${notepadId}`)
-        .on(
-          'postgres_changes',
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'notepad', 
-            filter: `id=eq.${notepadId}` 
-          },
-          (payload) => {
-            console.log("Received real-time update:", payload);
-            const newContent = (payload.new as NotepadRow).content;
-            if (newContent !== lastSavedContent.current) {
-              const cleanContent = newContent ? newContent.replace(/(\s*\n\s*){3,}/g, '\n\n') : "";
-              lastSavedContent.current = cleanContent;
-              setContent(cleanContent);
-            }
+    const channel = supabase.channel(`notepad_${notepadId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'notepad', 
+          filter: `id=eq.${notepadId}` 
+        },
+        (payload) => {
+          const newContent = (payload.new as NotepadRow).content;
+          if (newContent !== lastSavedContent.current) {
+            lastSavedContent.current = newContent || "";
+            setContent(newContent || "");
           }
-        )
-        .subscribe((status) => {
-          console.log("Subscription status:", status);
-        });
-    }
+        }
+      )
+      .subscribe();
 
     return () => {
-      if (channel) {
-        console.log("Cleaning up channel subscription");
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
   }, [notepadId, isInitialized]);
+
+  const handleChange = (newContent: string) => {
+    setContent(newContent);
+    saveContent(newContent);
+  };
 
   const saveContent = useCallback(
     debounce(async (newContent: string) => {
@@ -178,31 +209,23 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       setError(null);
       
       if (newContent !== lastSavedContent.current) {
-        console.log("Saving content:", newContent);
-        const cleanContent = newContent.replace(/(\s*\n\s*){3,}/g, '\n\n');
         const { error } = await supabase
           .from("notepad")
-          .update({ content: cleanContent })
+          .update({ content: newContent })
           .eq("id", notepadId);
 
         if (error) {
-          console.error("Error updating content:", error.message);
           setError("Failed to save changes. Please try again.");
           toast.error("Failed to save changes");
         } else {
-          lastSavedContent.current = cleanContent;
+          lastSavedContent.current = newContent;
         }
       }
       
       setIsSaving(false);
-    }, 5000), 
+    }, 1000),
     [notepadId, isInitialized]
   );
-
-  const handleChange = (newContent: string) => {
-    setContent(newContent);
-    saveContent(newContent);
-  };
 
   const removeExtraSpaces = () => {
     const cleanedContent = content
@@ -215,19 +238,68 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     toast.success("Empty lines removed");
   };
 
+  const styleString = `
+    .ql-container {
+      border: none !important;
+    }
+    .ql-toolbar {
+      border: none !important;
+      border-bottom: 1px solid var(--border) !important;
+      padding: 8px 12px;
+      background: var(--background);
+    }
+    .ql-editor {
+      padding: 1.5rem !important;
+      minHeight: calc(100vh - 250px);
+      fontSize: 2em !important;
+      color: ${theme === 'dark' ? 'white !important' : 'black !important'};
+      @media(max-width: 768px) {
+        paddingBottom: 8rem !important;
+        fontSize: 1.5em !important;
+      }
+    }
+    .ql-editor * {
+      color: inherit !important;
+    }
+    .ql-editor p, .ql-editor span {
+      color: inherit !important;
+    }
+    .dark .ql-editor {
+      background: var(--background);
+      color: white !important;
+    }
+    .dark .ql-editor * {
+      color: inherit !important;
+    }
+  `;
+
   return (
     <div className="container px-3 max-w-[1440px]">
       <style>{styleString}</style>
       <Toaster />
       <div className="flex items-center justify-between px-3">
-      <h1 className="text-lg md:text-xl lg:text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
+        <h1 className="text-lg md:text-xl lg:text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={removeExtraSpaces}>Remove Space</Button>
           <ModeToggle />
         </div>
       </div>
-      <div className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white">
+      <div 
+        ref={editorRef}
+        className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white"
+      >
+        {/* Render other users' cursors */}
+        {Object.values(cursors).map((cursor) => (
+          <Cursor
+            key={cursor.userId}
+            x={cursor.x}
+            y={cursor.y}
+            color={cursor.color}
+            username={cursor.username}
+          />
+        ))}
         <ReactQuill
+          ref={quillRef}
           theme="snow"
           className="w-full max-w-[1440px] h-[calc(100vh-200px)] p-6 text-lg text-gray-800 dark:text-white dark:border focus:outline-none resize-none"
           value={content}
