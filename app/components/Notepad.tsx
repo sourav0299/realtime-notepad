@@ -151,8 +151,9 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
             console.log("Received real-time update:", payload);
             const newContent = (payload.new as NotepadRow).content;
             if (newContent !== lastSavedContent.current) {
-              lastSavedContent.current = newContent || "";
-              setContent(newContent || "");
+              const cleanContent = newContent ? newContent.replace(/(\s*\n\s*){3,}/g, '\n\n') : "";
+              lastSavedContent.current = cleanContent;
+              setContent(cleanContent);
             }
           }
         )
@@ -178,9 +179,10 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       
       if (newContent !== lastSavedContent.current) {
         console.log("Saving content:", newContent);
+        const cleanContent = newContent.replace(/(\s*\n\s*){3,}/g, '\n\n');
         const { error } = await supabase
           .from("notepad")
-          .update({ content: newContent })
+          .update({ content: cleanContent })
           .eq("id", notepadId);
 
         if (error) {
@@ -188,7 +190,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
           setError("Failed to save changes. Please try again.");
           toast.error("Failed to save changes");
         } else {
-          lastSavedContent.current = newContent;
+          lastSavedContent.current = cleanContent;
         }
       }
       
