@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import "react-quill/dist/quill.snow.css";
 import { useTheme } from "next-themes";
 import { ModeToggle } from "../components/ToggleButton";
+import { Button } from "@/components/ui/button";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -201,13 +202,27 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
     saveContent(newContent);
   };
 
+  const removeExtraSpaces = () => {
+    const cleanedContent = content
+      .replace(/<p><br><\/p>/g, '')
+      .replace(/<p>\s*<\/p>/g, '')
+      .replace(/(<p><br><\/p>)+/g, '<p><br></p>')
+      .trim();
+    setContent(cleanedContent);
+    saveContent(cleanedContent);
+    toast.success("Empty lines removed");
+  };
+
   return (
     <div className="container px-3 max-w-[1440px]">
       <style>{styleString}</style>
       <Toaster />
       <div className="flex items-center justify-between px-3">
       <h1 className="text-lg md:text-xl lg:text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
-        <ModeToggle />
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={removeExtraSpaces}>Remove Space</Button>
+          <ModeToggle />
+        </div>
       </div>
       <div className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white">
         <ReactQuill
