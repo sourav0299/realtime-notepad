@@ -46,7 +46,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   const userId = useRef(uuidv4());
   const cursorChannel = useRef<RealtimeChannel | null>(null);
   const userColor = useRef(`hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`);
-  const userName = useRef(`Anonymous ${Math.floor(Math.random() * 1000)}`);
+  const userName = useRef(`${Math.floor(Math.random() * 1000)}`);
   const [cursors, setCursors] = useState<{ [key: string]: CursorPosition }>({});
 
   const modules = {
@@ -62,6 +62,9 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   useEffect(() => {
     if (!editorRef.current) return;
 
+    let rafId: number;
+    let lastPosition = { x: 0, y: 0 };
+
     const updateCursorPosition = (e: MouseEvent) => {
       if (!cursorChannel.current || !editorRef.current) return;
 
@@ -69,63 +72,83 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      cursorChannel.current.send({
-        type: 'broadcast',
-        event: 'cursor_move',
-        payload: {
-          userId: userId.current,
-          x,
-          y,
-          username: userName.current,
-          color: userColor.current
+      // Only update if position changed significantly (by 1 or more pixels)
+      if (Math.abs(x - lastPosition.x) >= 1 || Math.abs(y - lastPosition.y) >= 1) {
+        lastPosition = { x, y };
+        
+        // Cancel previous frame if it exists
+        if (rafId) {
+          cancelAnimationFrame(rafId);
         }
-      });
+
+        // Schedule new frame
+        rafId = requestAnimationFrame(() => {
+          cursorChannel.current?.send({
+            type: 'broadcast',
+            event: 'cursor_move',
+            payload: {
+              userId: userId.current,
+              x,
+              y,
+              username: userName.current,
+              color: userColor.current
+            }
+          });
+        });
+      }
     };
 
-    const debouncedUpdateCursor = debounce(updateCursorPosition, 16); // ~60fps
+    const debouncedUpdateCursor = debounce(updateCursorPosition, 8); // Reduced from 16ms to 8ms
 
-    // Set up cursor channel
-    cursorChannel.current = supabase.channel(`cursors_${notepadId}`)
-      .on('broadcast', { event: 'cursor_move' }, ({ payload }) => {
-        if (payload.userId !== userId.current) {
-          setCursors(prev => ({
-            ...prev,
-            [payload.userId]: payload
-          }));
-        }
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const state = cursorChannel.current?.presenceState() || {};
-        console.log('Presence state:', state);
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('Join:', key, newPresences);
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('Leave:', key, leftPresences);
-        // Remove cursor when user leaves
-        setCursors(prev => {
-          const newCursors = { ...prev };
-          leftPresences.forEach((presence: any) => {
-            delete newCursors[presence.userId];
-          });
-          return newCursors;
+    // Set up cursor channel with lower throttle
+    cursorChannel.current = supabase.channel(`cursors_${notepadId}`, {
+      config: {
+        broadcast: { ack: false } // Disable ack for faster broadcasting
+      }
+    })
+    .on('broadcast', { event: 'cursor_move' }, ({ payload }) => {
+      if (payload.userId !== userId.current) {
+        setCursors(prev => ({
+          ...prev,
+          [payload.userId]: payload
+        }));
+      }
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const state = cursorChannel.current?.presenceState() || {};
+      console.log('Presence state:', state);
+    })
+    .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      console.log('Join:', key, newPresences);
+    })
+    .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      console.log('Leave:', key, leftPresences);
+      // Remove cursor when user leaves
+      setCursors(prev => {
+        const newCursors = { ...prev };
+        leftPresences.forEach((presence: any) => {
+          delete newCursors[presence.userId];
         });
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await cursorChannel.current?.track({
-            userId: userId.current,
-            username: userName.current
-          });
-        }
+        return newCursors;
       });
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await cursorChannel.current?.track({
+          userId: userId.current,
+          username: userName.current
+        });
+      }
+    });
 
     // Add mouse move listener
-    editorRef.current.addEventListener('mousemove', debouncedUpdateCursor);
+    editorRef.current.addEventListener('mousemove', debouncedUpdateCursor, { passive: true });
 
     // Cleanup
     return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
       editorRef.current?.removeEventListener('mousemove', debouncedUpdateCursor);
       if (cursorChannel.current) {
         supabase.removeChannel(cursorChannel.current);
