@@ -246,7 +246,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       }
       
       setIsSaving(false);
-    }, 1000),
+    }, 5000),
     [notepadId, isInitialized]
   );
 
