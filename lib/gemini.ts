@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai"
+import { error } from "console";
+
+if(!process.env.NEXT_PUBLIC_GEMINI_API_KEY){
+  throw error("Try again Later")
+}
 
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
 
