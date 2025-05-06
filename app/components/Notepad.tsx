@@ -55,7 +55,7 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
       ['blockquote'],
       [{ 'list': 'bullet' }],
       ['link']
-    ]
+    ],
   };
 
   // Initialize cursor handling
@@ -262,56 +262,137 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
   };
 
   const styleString = `
+  .ql-container {
+    border: none !important;
+    position: relative !important;
+    height: calc(100vh - 150px) !important;
+  }
+
+  .ql-toolbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 8px 12px;
+    background: var(--background);
+  }
+
+  .ql-editor {
+    padding: 1rem 1rem 1rem 4rem !important;
+    font-size: 1.25rem !important;
+    line-height: 1.75 !important;
+    color: ${theme === 'dark' ? 'white !important' : 'black !important'};
+    counter-reset: line;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+
+  .ql-editor p {
+    counter-increment: line;
+    position: relative;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .ql-editor p::before {
+    content: counter(line);
+    position: absolute;
+    left: -3rem;
+    width: 2rem;
+    text-align: right;
+    color: #888;
+    font-size: 0.85em;
+    user-select: none;
+    top: 0.2rem;
+  }
+
+  .dark .ql-editor p::before {
+    color: #666;
+  }
+
+  .ql-editor * {
+    color: inherit !important;
+  }
+
+  .ql-editor p, .ql-editor span {
+    color: inherit !important;
+  }
+
+  .dark .ql-editor {
+    background: var(--background);
+    color: white !important;
+  }
+
+  .dark .ql-editor * {
+    color: inherit !important;
+  }
+
+  /* Custom Scrollbar */
+  .ql-editor::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .ql-editor::-webkit-scrollbar-track {
+    background: ${theme === 'dark' ? '#1a1a1a' : '#f1f1f1'};
+  }
+
+  .ql-editor::-webkit-scrollbar-thumb {
+    background: ${theme === 'dark' ? '#333' : '#ddd'};
+    border-radius: 4px;
+  }
+
+  .ql-editor::-webkit-scrollbar-thumb:hover {
+    background: ${theme === 'dark' ? '#444' : '#ccc'};
+  }
+
+  @media (max-width: 768px) {
     .ql-container {
-      border: none !important;
+      height: calc(100vh - 120px) !important;
     }
-    .ql-toolbar {
-      border: none !important;
-      border-bottom: 1px solid var(--border) !important;
-      padding: 8px 12px;
-      background: var(--background);
-    }
+
     .ql-editor {
-      padding: 1.5rem !important;
-      minHeight: calc(100vh - 250px);
-      fontSize: 2em !important;
-      color: ${theme === 'dark' ? 'white !important' : 'black !important'};
-      @media(max-width: 768px) {
-        paddingBottom: 8rem !important;
-        fontSize: 1.5em !important;
-      }
+      padding: 1rem 0.75rem 6rem 3rem !important;
+      font-size: 1.1rem !important;
     }
-    .ql-editor * {
-      color: inherit !important;
+
+    .ql-editor p::before {
+      left: -2.25rem;
+      font-size: 0.8em;
     }
-    .ql-editor p, .ql-editor span {
-      color: inherit !important;
+
+    .ql-toolbar {
+      padding: 6px 8px;
     }
-    .dark .ql-editor {
-      background: var(--background);
-      color: white !important;
+  }
+
+  @media (max-width: 480px) {
+    .ql-editor {
+      padding: 1rem 0.5rem 6rem 2.5rem !important;
+      font-size: 1rem !important;
     }
-    .dark .ql-editor * {
-      color: inherit !important;
+
+    .ql-editor p::before {
+      left: -2rem;
+      font-size: 0.75em;
     }
-  `;
+  }
+`;
 
   return (
-    <div className="container px-3 max-w-[1440px]">
+    <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-4 px-2 sm:px-4 pb-4">
       <style>{styleString}</style>
       <Toaster />
-      <div className="flex items-center justify-between px-3">
-        <h1 className="text-lg md:text-xl lg:text-3xl font-bold mb-6 text-gray-800 dark:text-white">Real-Time Notepad</h1>
-        <div className="flex gap-3">
+      <div className="flex justify-between">
+        <h1 className="text-lg md:text-xl lg:text-3xl font-bold text-gray-800 dark:text-white">Real-Time Notepad</h1>
+        <div className="flex gap-2 sm:gap-3">
           <Button variant="secondary" onClick={removeExtraSpaces}>Remove Space</Button>
           <ModeToggle />
         </div>
       </div>
       <div 
         ref={editorRef}
-        className="relative bg-white shadow-md rounded-lg overflow-hidden dark:bg-black dark:border dark:text-white"
+        className="border rounded-lg overflow-hidden bg-white dark:bg-black"
       >
-        {/* Render other users' cursors */}
         {Object.values(cursors).map((cursor) => (
           <Cursor
             key={cursor.userId}
@@ -324,11 +405,12 @@ const Notepad: React.FC<NotepadPorps> = ({ notepadId }) => {
         <ReactQuill
           ref={quillRef}
           theme="snow"
-          className="w-full max-w-[1440px] h-[calc(100vh-200px)] p-6 text-lg text-gray-800 dark:text-white dark:border focus:outline-none resize-none"
+          className="relative h-full"
           value={content}
           modules={modules}
           onChange={handleChange}
           placeholder="Start typing..."
+          preserveWhitespace={true}
         />
         {isSaving && (
           <div className="absolute top-4 right-4 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
